@@ -1,21 +1,30 @@
-# Node.js dependencies
-.node_modules
-npm-debug.log*
-yarn.lock
+# Global Node.js dependencies
+node_modules/
 package-lock.json
+yarn.lock
 
-# Environment variables
-.env
+# Ignore backend dependencies
+backend/node_modules/
+backend/.env
+backend/dist/
+backend/.cache/
+
+# Ignore frontend dependencies
+frontend/node_modules/
+frontend/.env
+frontend/.next/
+frontend/dist/
+frontend/.cache/
 
 # Logs
 logs/
 *.log
+npm-debug.log*
 yarn-error.log
 pnpm-debug.log
 lerna-debug.log
-tsconfig.tsbuildinfo
 
-# Build artifacts
+# Build files
 dist/
 build/
 out/
@@ -30,19 +39,6 @@ out/
 *.DS_Store
 Thumbs.db
 
-# Backend-specific
-backend/node_modules/
-backend/.env
-backend/dist/
-backend/.cache/
-
-# Frontend-specific
-frontend/node_modules/
-frontend/.env
-frontend/.next/
-frontend/dist/
-frontend/.cache/
-
-# Misc
+# Coverage & misc
 coverage/
 public/build/
