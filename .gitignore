@@ -24,7 +24,7 @@ yarn-error.log
 pnpm-debug.log
 lerna-debug.log
 
-#Ignore environment variables
+#Ignore environment variables yeah
 .env
 .env.local
 .env.development
