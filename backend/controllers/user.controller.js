@@ -1,4 +1,5 @@
 import User from '../models/user.model.js'
+import Notification from '../models/notification.model.js'
 
 export const getUserProfile = async (req, res) => {
   const {username} = req.params
@@ -37,10 +38,44 @@ export const followUnfollowUser = async (req, res) => {
       // follow the user
       await User.findByIdAndUpdate(id, {$push: {followers: req.user._id}})
       await User.findByIdAndUpdate(req.user._id, {$push: {following: id}})
+      // send notification to user
+      const newNotification = new Notification({
+        type: 'follow',
+        from: req.user._id,
+        to: userToModify._id,
+      })
+      await newNotification.save()
       res.status(200).json({message: "User followed successfully"})
     }
   } catch (error) {
     console.log('Error in followUnfollowUser controller:', error.message)
+    res.status(500).json({error: error.message})
+  }
+}
+
+export const getSuggestedUsers = async(req, res) => {
+  try {
+    const userId = req.user._id
+    const userFollowedByMe = await User.findById(userId).select('following')
+    const users = await User.aggregate([
+      {
+        $match: {
+          _id: {$ne: userId}
+        }
+      },
+      {
+        $sample: {
+          size: 10
+        }
+      }
+    ])
+    // filterout the users that i'm already following
+    const filteredUsers = users.filter(user => !userFollowedByMe.following.includes(users._id))
+    const suggestedUsers = filteredUsers.slice(0,4)
+    suggestedUsers.forEach(user => user.password=null)
+    res.status(200).json(suggestedUsers)
+  } catch (error) {
+    console.log('Error in getSuggestedUsers: ', error.message)
     res.status(500).json({error: error.message})
   }
 }
