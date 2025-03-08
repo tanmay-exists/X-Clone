@@ -120,8 +120,6 @@ export const updateUserProfile = async(req, res) => {
       const uploadedResponse = await cloudinary.uploader.upload(coverImg)
       coverImg = uploadedResponse.secure_url
     }
-    
-    console.log("Before update:", user); // Debugging
 
     user.fullName = fullName || user.fullName
     user.email = email || user.email
@@ -130,13 +128,8 @@ export const updateUserProfile = async(req, res) => {
     user.link = link || user.link
     user.profileImg = profileImg || user.profileImg
     user.coverImg = coverImg || user.coverImg 
-    
-    if (email) {
-      user.set('email', email);
-    }
-
+   
     user = await user.save()
-    console.log("After update:", user); // Debugging
     user.password = null
     return res.status(200).json(user)
 
