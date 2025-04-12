@@ -1,37 +1,28 @@
 import './App.css'
+import {Routes, Route} from 'react-router-dom'
+import HomePage from './pages/home/HomePage.jsx'
+import LoginPage from './pages/auth/login/LoginPage.jsx'
+import SignUpPage from './pages/auth/signup/SignUpPage.jsx'
+import SideBar from './components/comman/Sidebar.jsx'
+import RightPanel from './components/comman/RightPanel.jsx'
+import NotificationPage from './pages/notification/NotificationPage.jsx'
+import ProfilePage from './pages/profile/ProfilePage.jsx'
 
 function App() {
 
   return (
-    <>
-      <p className='text-5xl text-red-500 text-center'>Hello from App.jsx nigga</p>  
-      <p className="text-red-500 text-xl">Tailwind is working</p>
-      <button className="btn btn-neutral">Neutral</button>
-      <button className="btn btn-primary">Primary</button>
-      <button className="btn btn-secondary">Secondary</button>
-      <button className="btn btn-accent">Accent</button>
-      <button className="btn btn-info">Info</button>
-      <button className="btn btn-success">Success</button>
-      <button className="btn btn-warning">Warning</button>
-      <button className="btn btn-error">Error</button>
-
-      <div className="hero bg-base-200 min-h-screen">
-        <div className="hero-content flex-col lg:flex-row">
-          <img
-            src="https://img.daisyui.com/images/stock/photo-1635805737707-575885ab0820.webp"
-            className="max-w-sm rounded-lg shadow-2xl" />
-          <div>
-            <h1 className="text-5xl font-bold">Box Office News!</h1>
-            <p className="py-6">
-              Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem
-              quasi. In deleniti eaque aut repudiandae et a id nisi.
-            </p>
-            <button className="btn btn-primary">Get Started</button>
-          </div>
-        </div>
-      </div>      
-      
-    </>
+    <div className="bg-black text-gray-200 min-h-screen flex justify-center">
+      <SideBar />
+      <Routes>
+        <Route path='/' element={<HomePage />}/>
+        <Route path='/login' element={<LoginPage />}/>
+        <Route path='/signup' element={<SignUpPage />}/>
+        <Route path='/notifications' element={<NotificationPage />}/>
+        <Route path='/notifications' element={<NotificationPage />}/>
+        <Route path='/profile/:username' element={<ProfilePage />}/>
+      </Routes>
+      <RightPanel />
+    </div>
   )
 }
 
