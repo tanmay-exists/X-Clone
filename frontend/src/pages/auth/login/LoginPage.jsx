@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import XSvg from "../../../components/svgs/X";
 import { MdOutlineMail, MdPassword } from "react-icons/md";
+import {toast} from 'react-hot-toast'
 
 const LoginPage = () => {
 	const [formData, setFormData] = useState({
@@ -10,16 +11,43 @@ const LoginPage = () => {
 		password: "",
 	});
 
+  const queryClient = useQueryClient()
+
+  const {mutate: loginMutation, isError, isPending, error} = useMutation({
+    mutationFn: async ({username, password}) => {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({username, password}),
+        })
+
+        const data = await res.json()
+        if(!res.ok){
+          throw new Error(data.error || 'Something went wrong')
+        }
+        return data
+
+      } catch (error) {
+        throw new Error(error)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["authUser"]})
+    }
+  })
+
 	const handleSubmit = (e) => {
 		e.preventDefault();
-		console.log(formData);
+    loginMutation(formData)
 	};
 
 	const handleInputChange = (e) => {
 		setFormData({ ...formData, [e.target.name]: e.target.value });
 	};
 
-	const isError = false;
 
 	return (
 		<div className='max-w-screen-xl mx-auto flex h-screen px-10'>
@@ -62,9 +90,9 @@ const LoginPage = () => {
 
 					{/* Login Button */}
 					<button className='bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full text-lg w-full'>
-						Login
+            {isPending ? 'Loading...' : 'Login'}
 					</button>
-					{isError && <p className='text-red-500'>Something went wrong</p>}
+					{isError && <p className='text-red-500'>{error.message}</p>}
 				</form>
 
 				{/* Signup Option */}

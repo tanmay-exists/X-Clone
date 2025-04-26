@@ -10,7 +10,7 @@ const LoadingSpinner = ({ size = "md" }) => {
 
   return (
     <div
-      className={`inline-block animate-spin rounded-full border-t-transparent border-solid ${sizeClass} border-gray-500`}
+      className={`inline-block animate-spin rounded-full border-t-transparent border-solid ${sizeClass} border-gray-700`}
     />
   );
 };
