@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query'
 import LoadingSpinner from './components/comman/LoadingSpinner.jsx'
 import { Navigate } from 'react-router-dom'
 
+
 function App() {
   const {data: authUser, isLoading} = useQuery({
     // use queryKey to give a unique name to our query and refer to it later
