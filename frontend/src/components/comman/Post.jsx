@@ -71,15 +71,8 @@ const Post = ({ post }) => {
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
-                <div className="w-full h-full bg-gray-300 flex items-center justify-center rounded-full">
-                  <svg
-                    className="w-6 h-6 text-gray-500"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
+                <div className="w-12 h-12 bg-gray-300 animate-pulse flex items-center justify-center">
+                  <span className="text-transparent">Avatar</span>
                 </div>
               )}
             </div>
