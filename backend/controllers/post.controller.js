@@ -77,7 +77,7 @@ export const commentOnPost = async (req, res) => {
     const comment = {user: userId, text}
     post.comments.push(comment)
     await post.save()
-    res.status(200).json(post)
+    res.status(200).json(post.comments)
 
   } catch (error) {
     console.log('Error in commentOnPost controller: ', error)
@@ -114,7 +114,7 @@ export const likeUnlikePost = async (req, res) => {
         type: 'like'
       })
       await notification.save()
-      res.status(200).json(post.likes)  // these area updated likes
+      res.status(200).json(post.likes)  // these area updated likes i.e. post.likes = updated likes
     }
   } catch (error) {
     console.log('Error in likeUnlikePost controller: ', error)
