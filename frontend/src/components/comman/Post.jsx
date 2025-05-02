@@ -14,12 +14,12 @@ const Post = ({ post }) => {
   const { data: authUser } = useQuery({ queryKey: ["authUser"] });
   const queryClient = useQueryClient();
   const postOwner = post.user;
-  const isLiked = false;
+  const isLiked = post.likes.includes(authUser._id);
   const isMyPost = authUser?._id === post.user._id; // Safe navigation with optional chaining
   const formattedDate = "1h";
   const isCommenting = false;
 
-  const { mutate: deletePost, isPending } = useMutation({
+  const { mutate: deletePost, isPending: isDeleting } = useMutation({
     mutationFn: async () => {
       try {
         const res = await fetch(`/api/posts/${post._id}`, {
@@ -46,7 +46,41 @@ const Post = ({ post }) => {
     onError: (error) => {
       toast.error(`Failed to delete post: ${error.message}`);
     },
-  });
+  } );
+
+  const {mutate: likePost, isPending:isLiking} = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(`/api/posts/like/${post._id}`, {
+          method: 'POST',
+        }) 
+        const data = await res.json()
+        if(!res.ok){
+          throw new Error(data.error || 'Something went wrong')
+        }
+        return data
+
+      } catch (error) {
+        throw new Error(error) 
+      }
+    },
+    onSuccess: (updatedLikes) => {
+      // this is no the best ux, as it'll refetch all posts
+      // queryClient.invalidateQueries({queryKey: ['posts']})
+      // instead of refreshing all the posts, just update cache directly for that post which is liked
+      queryClient.setQueryData(['posts'], (oldData) => {
+        return oldData.map((p) => {
+          if(p._id === post._id){
+            return { ...p, likes:updatedLikes}
+          }
+          return p
+        })
+      })
+    },
+    onError: (error) => {
+      toast.error(error.message)
+    }
+  })
 
   const handleDeletePost = () => {
     deletePost();
@@ -56,7 +90,10 @@ const Post = ({ post }) => {
     e.preventDefault();
   };
 
-  const handleLikePost = () => {};
+  const handleLikePost = () => {
+    if(isLiking) return
+    likePost()
+  };
 
   return (
     <>
@@ -90,11 +127,10 @@ const Post = ({ post }) => {
             </span>
             {isMyPost && (
               <span className="flex justify-end flex-1">
-                {!isPending ? (
+                {!isDeleting && (
                   <FaTrash className="cursor-pointer hover:text-red-500" onClick={handleDeletePost} />
-                ) : (
-                  <LoadingSpinner size="sm" />
                 )}
+                {isDeleting && <LoadingSpinner size="sm" />}
               </span>
             )}
           </div>
@@ -119,8 +155,8 @@ const Post = ({ post }) => {
                   {post.comments.length}
                 </span>
               </div>
-              <dialog id={`comments_modal${post._id}`} className="border-none outline-none">
-                <div className="bg-gray-800 rounded-lg border border-gray-600 p-4 w-full max-w-md">
+              <dialog id={`comments_modal${post._id}`} className="border-none outline-none border-none outline-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-transparent">
+                <div className="bg-black rounded-lg p-4 w-full max-w-md">
                   <h3 className="font-bold text-lg mb-4 text-white">COMMENTS</h3>
                   <div className="flex flex-col gap-3 max-h-60 overflow-auto">
                     {post.comments.length === 0 && (
@@ -167,33 +203,14 @@ const Post = ({ post }) => {
                     onSubmit={handlePostComment}
                   >
                     <textarea
-                      className="w-full p-1 rounded text-md resize-none border border-gray-800 bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full p-1 rounded text-md resize-none border border-gray-800 bg-black text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
                       placeholder="Add a comment..."
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                     />
-                    <button className="bg-blue-600 text-white rounded-full text-sm px-4 py-1 hover:bg-blue-700 transition">
+                    <button className="bg-blue-500 text-white rounded-full text-sm px-4 py-1 hover:bg-blue-700 transition">
                       {isCommenting ? (
-                        <svg
-                          className="animate-spin h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8v8h8a8 8 0 11-16 0z"
-                          ></path>
-                        </svg>
+                        <LoadingSpinner size='md' />
                       ) : (
                         "Post"
                       )}
@@ -209,10 +226,11 @@ const Post = ({ post }) => {
                 <span className="text-sm text-slate-500 group-hover:text-green-500">0</span>
               </div>
               <div className="flex gap-1 items-center group cursor-pointer" onClick={handleLikePost}>
-                {!isLiked && (
+                {isLiking && <LoadingSpinner size='sim' />}
+                {!isLiked && !isLiking && (
                   <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 group-hover:text-pink-500" />
                 )}
-                {isLiked && <FaRegHeart className="w-4 h-4 cursor-pointer text-pink-500" />}
+                {isLiked && !isLiking && <FaRegHeart className="w-4 h-4 cursor-pointer text-pink-500" />}
                 <span
                   className={`text-sm text-slate-500 group-hover:text-pink-500 ${
                     isLiked ? "text-pink-500" : ""
