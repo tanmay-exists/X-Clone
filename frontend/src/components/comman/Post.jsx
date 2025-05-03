@@ -8,16 +8,17 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import LoadingSpinner from "./LoadingSpinner.jsx";
-import {formatPostDate} from '../../utils/date/index.js'
+import { formatPostDate } from '../../utils/date/index.js';
 
-const Post = ({ post }) => {
+const Post = ({ post, feedType, username }) => {
   const [comment, setComment] = useState("");
   const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+  const [isLikedLocal, setIsLikedLocal] = useState(post.likes.includes(authUser?._id));
+  const [likeCount, setLikeCount] = useState(post.likes.length);
   const queryClient = useQueryClient();
   const postOwner = post.user;
-  const isLiked = post.likes.includes(authUser._id);
-  const isMyPost = authUser?._id === post.user._id; // Safe navigation with optional chaining
-  const formattedDate = formatPostDate(post.createdAt) 
+  const isMyPost = authUser?._id === post.user._id;
+  const formattedDate = formatPostDate(post.createdAt);
 
   const { mutate: deletePost, isPending: isDeleting } = useMutation({
     mutationFn: async () => {
@@ -25,108 +26,119 @@ const Post = ({ post }) => {
         const res = await fetch(`/api/posts/${post._id}`, {
           method: "DELETE",
           headers: {
-            "Content-Type": "application/json", // Ensure proper headers
+            "Content-Type": "application/json",
           },
         });
         const data = await res.json();
-        console.log("Delete response:", data); // Debug log
         if (!res.ok) {
           throw new Error(data.error || "Something went wrong");
         }
         return data;
       } catch (error) {
-        console.error("Delete error:", error); // Debug log
         throw error;
       }
     },
     onSuccess: () => {
       toast.success("Post deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["posts"] }); // Fixed typo
+      queryClient.invalidateQueries({ queryKey: ["posts", feedType, username] });
     },
     onError: (error) => {
       toast.error(`Failed to delete post: ${error.message}`);
     },
-  } );
+  });
 
-
-  const {mutate: likePost, isPending:isLiking} = useMutation({
+  const { mutate: likePost, isPending: isLiking } = useMutation({
     mutationFn: async () => {
       try {
         const res = await fetch(`/api/posts/like/${post._id}`, {
           method: 'POST',
-        }) 
-        const data = await res.json()
-        if(!res.ok){
-          throw new Error(data.error || 'Something went wrong')
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Something went wrong');
         }
-        return data
-
+        return data;
       } catch (error) {
-        throw new Error(error) 
+        throw error;
       }
     },
+    onMutate: async () => {
+      // Optimistic update
+      setIsLikedLocal((prev) => !prev);
+      setLikeCount((prev) => (isLikedLocal ? prev - 1 : prev + 1));
+    },
     onSuccess: (updatedLikes) => {
-      // this is no the best ux, as it'll refetch all posts
-      // queryClient.invalidateQueries({queryKey: ['posts']})
-      // instead of refreshing all the posts, just update cache directly for that post which is liked
-      queryClient.setQueryData(['posts'], (oldData) => {
+      // Update the cache with the actual data from the server
+      queryClient.setQueryData(['posts', feedType, username], (oldData) => {
+        if (!oldData) return [];
         return oldData.map((p) => {
-          if(p._id === post._id){
-            return { ...p, likes:updatedLikes}
+          if (p._id === post._id) {
+            return { ...p, likes: updatedLikes };
           }
-          return p
-        })
-      })
+          return p;
+        });
+      });
+      setIsLikedLocal(updatedLikes.includes(authUser?._id));
+      setLikeCount(updatedLikes.length);
+      // Invalidate queries to refetch liked posts
+      if (feedType === 'likes') {
+        queryClient.invalidateQueries({ queryKey: ['posts', 'likes', username] });
+      }
     },
     onError: (error) => {
-      toast.error(error.message)
-    }
-  })
+      // Revert local state on error
+      setIsLikedLocal(post.likes.includes(authUser?._id));
+      setLikeCount(post.likes.length);
+      toast.error(error.message);
+    },
+  });
 
-
-  const {mutate: commentPost, isPending: isCommenting} = useMutation({
+  const { mutate: commentPost, isPending: isCommenting } = useMutation({
     mutationFn: async () => {
       try {
-         const res = await fetch(`/api/posts/comment/${post._id}`, {
+        const res = await fetch(`/api/posts/comment/${post._id}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
           },
-          body: JSON.stringify({text: comment})
-        }) 
-        const data = await res.json()
-        if(!res.ok){
-          throw new Error(data.error || 'Something went wrong')
+          body: JSON.stringify({ text: comment }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Something went wrong');
         }
-        return data
-
-       } catch (error) {
-         throw new Error(error)  
-       } 
+        return data;
+      } catch (error) {
+        throw error;
+      }
     },
     onSuccess: () => {
-      toast.success('Comment posted successfully')
-      setComment('')
-      queryClient.invalidateQueries({queryKey: ['posts']})
+      toast.success('Comment posted successfully');
+      setComment('');
+      queryClient.invalidateQueries({ queryKey: ['posts', feedType, username] });
     },
     onError: (error) => {
-      toast.error(error.message)
-    }
-  })
+      toast.error(error.message);
+    },
+  });
 
   const handleDeletePost = () => {
     deletePost();
   };
 
   const handlePostComment = (e) => {
-    e.preventDefault()
-    if(isCommenting) return
-    commentPost()
+    e.preventDefault();
+    if (isCommenting) return;
+    commentPost();
   };
 
   const handleLikePost = () => {
-    if(isLiking) return
-    likePost()
+    if (isLiking) return;
+    likePost();
   };
 
   return (
@@ -189,7 +201,7 @@ const Post = ({ post }) => {
                   {post.comments.length}
                 </span>
               </div>
-              <dialog id={`comments_modal${post._id}`} className="border-none outline-none border-none outline-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-transparent">
+              <dialog id={`comments_modal${post._id}`} className="border-none outline-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-transparent">
                 <div className="bg-black rounded-lg p-4 w-full max-w-md">
                   <h3 className="font-bold text-lg mb-4 text-white">COMMENTS</h3>
                   <div className="flex flex-col gap-3 max-h-60 overflow-auto">
@@ -260,17 +272,19 @@ const Post = ({ post }) => {
                 <span className="text-sm text-slate-500 group-hover:text-green-500">0</span>
               </div>
               <div className="flex gap-1 items-center group cursor-pointer" onClick={handleLikePost}>
-                {isLiking && <LoadingSpinner size='sim' />}
-                {!isLiked && !isLiking && (
+                {isLiking && <LoadingSpinner size='sm' />}
+                {!isLikedLocal && !isLiking && (
                   <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 group-hover:text-pink-500" />
                 )}
-                {isLiked && !isLiking && <FaRegHeart className="w-4 h-4 cursor-pointer text-pink-500" />}
+                {isLikedLocal && !isLiking && (
+                  <FaRegHeart className="w-4 h-4 cursor-pointer text-pink-500" />
+                )}
                 <span
                   className={`text-sm text-slate-500 group-hover:text-pink-500 ${
-                    isLiked ? "text-pink-500" : ""
+                    isLikedLocal ? "text-pink-500" : ""
                   }`}
                 >
-                  {post.likes.length}
+                  {likeCount}
                 </span>
               </div>
             </div>

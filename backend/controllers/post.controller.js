@@ -86,41 +86,42 @@ export const commentOnPost = async (req, res) => {
 }
 
 
+
 export const likeUnlikePost = async (req, res) => {
   try {
-    const userId = req.user._id
-    const {id: postId} = req.params
-    const post = await Post.findById(postId)
-    if(!post){
-      return res.status(404).json({error: 'Post not found'})
+    const userId = req.user._id;
+    const { id: postId } = req.params;
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
     }
-    
-    const userLikedPost = post.likes.includes(userId)
-    if(userLikedPost){
-      // unlike
-      await Post.updateOne({_id:postId}, {$pull: {likes: userId}})
-      await User.updateOne({_id: userId}, {$pull: {likedPosts: postId}})
-      const updateLikes = post.likes.filter((id) => id.toString() !== userId.toString())
-      res.status(200).json(updateLikes)
-    }
-    else{
-      // like post
-      post.likes.push(userId)
-      await User.updateOne({_id: userId}, {$push: {likedPosts: postId}})
-      await post.save()
+
+    const userLikedPost = post.likes.includes(userId);
+    if (userLikedPost) {
+      // Unlike
+      await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
+      await User.updateOne({ _id: userId }, { $pull: { likedPosts: postId } });
+      post.likes = post.likes.filter((id) => id.toString() !== userId.toString());
+      res.status(200).json(post.likes);
+    } else {
+      // Like
+      post.likes.push(userId);
+      await User.updateOne({ _id: userId }, { $push: { likedPosts: postId } });
+      await post.save();
       const notification = new Notification({
         from: userId,
         to: post.user,
-        type: 'like'
-      })
-      await notification.save()
-      res.status(200).json(post.likes)  // these area updated likes i.e. post.likes = updated likes
+        type: "like",
+      });
+      await notification.save();
+      res.status(200).json(post.likes);
     }
   } catch (error) {
-    console.log('Error in likeUnlikePost controller: ', error)
-    res.status(500).json({error: 'Internal server error'})
+    console.log("Error in likeUnlikePost controller:", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
-}
+};
+
 
 
 export const getAllPosts = async (req, res) => {
@@ -147,28 +148,38 @@ export const getAllPosts = async (req, res) => {
 
 
 export const getLikedPosts = async (req, res) => {
-  const userId = req.params.id
+  const userId = req.params.id;
   try {
-    const user = await User.findById(userId) 
-    if(!user) return res.status(404).json({error: 'User not found'})
-    
-    const likedPosts = await Post.find({_id: {$in: user.likedPosts}})
-    .populate({
-      path: 'user',
-      select: '-password' 
-    })
-    .populate({
-      path: 'comments.user',
-      select: '-password'
-    })
+    console.log("Fetching liked posts for userId:", userId);
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.log("Invalid userId format:", userId);
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
 
-    res.status(200).json(likedPosts)
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("User not found for userId:", userId);
+      return res.status(404).json({ error: "User not found" });
+    }
 
+    const likedPosts = await Post.find({ _id: { $in: user.likedPosts } })
+      .populate({
+        path: "user",
+        select: "-password",
+      })
+      .populate({
+        path: "comments.user",
+        select: "-password",
+      });
+
+    console.log("Liked posts found:", likedPosts);
+    res.status(200).json(likedPosts);
   } catch (error) {
-    console.log('Error in getLikedPosts controller: ', error)
-    res.status(500).json({error: 'Internal server error'})
-  } 
-}
+    console.log("Error in getLikedPosts controller:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 
 export const getFollowingPosts = async (req, res) => {
