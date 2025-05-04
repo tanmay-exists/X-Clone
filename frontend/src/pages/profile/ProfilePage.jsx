@@ -9,6 +9,8 @@ import { IoCalendarOutline } from "react-icons/io5";
 import { FaLink } from "react-icons/fa";
 import { MdEdit } from "react-icons/md";
 import { formatMemberSinceDate } from '../../utils/date/index.js';
+import useFollow from '../../hooks/useFollow.jsx';
+import { toast } from "react-hot-toast";
 
 const ProfilePage = () => {
   const { username } = useParams();
@@ -19,6 +21,9 @@ const ProfilePage = () => {
   const coverImgRef = useRef(null);
   const profileImgRef = useRef(null);
   const modalRef = useRef(null);
+  const queryClient = useQueryClient();
+
+  const { follow, isPending } = useFollow();
 
   // Fetch the authenticated user
   const { data: authUser, error: authError } = useQuery({
@@ -38,13 +43,14 @@ const ProfilePage = () => {
         if (!res.ok) {
           throw new Error(data.error || "Failed to fetch authenticated user");
         }
+        console.log("Fetched authUser:", data); // Debug log
         return data;
       } catch (error) {
         console.error("Auth fetch error:", error.message);
         throw error;
       }
     },
-    retry: false, // Disable retries for faster debugging
+    retry: false,
   });
 
   // Determine if this is the user's own profile
@@ -75,7 +81,74 @@ const ProfilePage = () => {
         throw error;
       }
     },
-    enabled: !!authUser, // Only fetch profile after authUser is loaded
+    enabled: !!authUser,
+  });
+
+  // Fetch the user's posts count
+  const { data: userPosts } = useQuery({
+    queryKey: ['posts', 'posts', username],
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/posts/user/${username}`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Response is not JSON");
+        }
+        const data = await res.json();
+        console.log("User posts API response:", data);
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong");
+        }
+        return data;
+      } catch (error) {
+        console.error("User posts fetch error:", error.message);
+        throw error;
+      }
+    },
+    enabled: !!user,
+  });
+
+  const amIFollowing = authUser?.following.includes(user?._id);
+
+  const { mutate: updateProfile, isPending: isUpdatingProfile } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(`/api/users/update`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            coverImg,
+            profileImg
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Something went wrong');
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      toast.success('Profile updated successfully');
+      setIsEdited(false); // Reset the edited state
+      setCoverImg(null); // Reset coverImg
+      setProfileImg(null); // Reset profileImg
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['authUser'] }),
+        queryClient.invalidateQueries({ queryKey: ['userProfile'] }),
+      ]);
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
   });
 
   const handleImgChange = (e, state) => {
@@ -123,7 +196,7 @@ const ProfilePage = () => {
             </Link>
             <div className="flex flex-col">
               <p className="font-bold text-lg">{user?.fullName}</p>
-              <span className="text-sm text-slate-500">{user?.posts?.length || 0} posts</span>
+              <span className="text-sm text-slate-500">{userPosts?.length || 0} posts</span>
             </div>
           </div>
 
@@ -200,20 +273,21 @@ const ProfilePage = () => {
             {!isMyProfile && (
               <button
                 className="px-4 py-1 text-sm border border-gray-500 text-white rounded-full hover:bg-gray-800 transition"
-                onClick={() => alert("Followed successfully")}
+                onClick={() => follow(user?._id)}
               >
-                Follow
+                {isPending && 'Loading...'} 
+                {!isPending && amIFollowing && 'Unfollow'}
+                {!isPending && !amIFollowing && 'Follow'}
               </button>
             )}
             {isEdited && (
               <button
                 className="px-4 py-1 text-sm bg-blue-600 text-white rounded-full ml-2 hover:bg-blue-700 transition"
                 onClick={() => {
-                  alert("Profile updated successfully");
-                  setIsEdited(false);
+                  updateProfile();
                 }}
               >
-                Update
+                {isUpdatingProfile ? 'Updating...' : 'Update'}
               </button>
             )}
           </div>
