@@ -6,7 +6,6 @@ A simple clone of [x.com](https://x.com) built to learn fullstack development us
 
 ![Project Preview](./screenshot.png)
 
-## 🚀 How to Run
 
 ### Backend
 - Node.js
