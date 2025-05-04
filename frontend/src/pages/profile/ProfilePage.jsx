@@ -114,7 +114,7 @@ const ProfilePage = () => {
 
   const amIFollowing = authUser?.following.includes(user?._id);
 
-  const { mutate: updateProfile, isPending: isUpdatingProfile } = useMutation({
+  const { mutateAsync: updateProfile, isPending: isUpdatingProfile } = useMutation({
     mutationFn: async () => {
       try {
         const res = await fetch(`/api/users/update`, {
@@ -283,8 +283,10 @@ const ProfilePage = () => {
             {isEdited && (
               <button
                 className="px-4 py-1 text-sm bg-blue-600 text-white rounded-full ml-2 hover:bg-blue-700 transition"
-                onClick={() => {
-                  updateProfile();
+                onClick={async () => {
+                  await updateProfile();
+                  setProfileImg(null)
+                  setCoverImg(null)
                 }}
               >
                 {isUpdatingProfile ? 'Updating...' : 'Update'}
