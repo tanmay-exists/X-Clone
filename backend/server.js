@@ -7,13 +7,8 @@ import dotenv from 'dotenv';
 import connectMongoDB from './db/connectMongoDB.js';
 import cookieParser from 'cookie-parser';
 import { v2 as cloudinary } from 'cloudinary';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import cors from 'cors';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 dotenv.config();
 
