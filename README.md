@@ -6,6 +6,7 @@ A simple clone of [x.com](https://x.com) built to learn fullstack development us
 
 ![Project Preview](./screenshot.png)
 
+### View it [here](https://x-clone-3y95.onrender.com/) 
 
 ### Backend
 - Node.js
